@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets / environment-specific overrides
+.env
+
+# Runtime-generated data, not source
+logs/
+data/
+
+com.local.yfinance.plist
+*.bak

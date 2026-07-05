@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Movers</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --border: #262b36;
+    --text: #e6e8eb;
+    --muted: #8a90a0;
+    --green: #24c38a;
+    --red: #ff5c5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .tab.active { color: var(--text); border-color: #4a5164; background: #1e2330; }
+  .status { font-size: 12px; color: var(--muted); }
+  main { padding: 10px 20px 40px; max-width: 900px; margin: 0 auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 10px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #131722; }
+  .sym { font-weight: 600; }
+  .name { color: var(--muted); font-size: 12px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .loading { padding: 40px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📈 Market Movers</h1>
+  <div class="tabs">
+    <button class="tab active" data-kind="gainers">Gainers</button>
+    <button class="tab" data-kind="losers">Losers</button>
+    <button class="tab" data-kind="actives">Most Active</button>
+    <button class="tab" id="refreshBtn" title="Refresh now">⟳</button>
+  </div>
+  <div class="status" id="status">loading…</div>
+</header>
+
+<main>
+  <table id="tbl" style="display:none">
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th class="num">Price</th>
+        <th class="num">Change</th>
+        <th class="num">% Change</th>
+        <th class="num">Volume</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="loading" id="loadingMsg">Fetching data…</div>
+</main>
+
+<script>
+let currentKind = "gainers";
+
+function fmtNum(n) {
+  if (n === null || n === undefined) return "—";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+function fmtVol(n) {
+  if (n === null || n === undefined) return "—";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  return n;
+}
+
+async function load(kind) {
+  document.getElementById("status").textContent = "refreshing…";
+  try {
+    const res = await fetch(`/api/${kind}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+    data.forEach(row => {
+      const dir = (row.changePct || 0) >= 0 ? "up" : "down";
+      const sign = (row.changePct || 0) >= 0 ? "+" : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <div class="sym">${row.symbol}</div>
+          <div class="name">${row.name || ""}</div>
+        </td>
+        <td class="num">${fmtNum(row.price)}</td>
+        <td class="num ${dir}">${sign}${fmtNum(row.change)}</td>
+        <td class="num ${dir}">${sign}${fmtNum(row.changePct)}%</td>
+        <td class="num">${fmtVol(row.volume)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("tbl").style.display = "table";
+    document.getElementById("loadingMsg").style.display = "none";
+    document.getElementById("status").textContent =
+      "updated " + new Date().toLocaleTimeString();
+  } catch (e) {
+    document.getElementById("status").textContent = "error: " + e.message;
+  }
+}
+
+document.querySelectorAll(".tab[data-kind]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentKind = btn.dataset.kind;
+    document.getElementById("tbl").style.display = "none";
+    document.getElementById("loadingMsg").style.display = "block";
+    load(currentKind);
+  });
+});
+
+document.getElementById("refreshBtn").addEventListener("click", () => load(currentKind));
+
+load(currentKind);
+</script>
+
+</body>
+</html>

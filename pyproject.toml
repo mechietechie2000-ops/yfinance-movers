@@ -1,0 +1,9 @@
+[project]
+name = "yahoo-movers"
+version = "0.1.0"
+description = "Lightweight local dashboard for Yahoo Finance gainers/losers/most active"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=3.0",
+    "requests>=2.31",
+]
